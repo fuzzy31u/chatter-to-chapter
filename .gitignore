@@ -15,7 +15,7 @@ ENV/
 
 # Environment variables
 .env
-article_factory/.env
+chatter_to_chapter/.env
 
 # IDE
 .vscode/
@@ -37,4 +37,8 @@ Thumbs.db
 *.jpg
 *.jpeg
 !docs/**
-!article_factory/sample_data/**
+!chatter_to_chapter/sample_data/**
+
+# Draft documents
+zenn-article.md
+demo-script.md

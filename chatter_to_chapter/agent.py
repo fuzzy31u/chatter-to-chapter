@@ -1,4 +1,4 @@
-"""Article Factory — ポッドキャスト文字起こしから月刊記事を自動生成するパイプライン。"""
+"""Chatter to Chapter — ポッドキャスト文字起こしから記事を自動生成するパイプライン。"""
 
 import logging
 import os
@@ -159,9 +159,9 @@ publisher = Agent(
     after_agent_callback=_after_agent,
 )
 
-# --- Root Agent: ArticleFactory Pipeline ---
+# --- Root Agent: ChatterToChapter Pipeline ---
 root_agent = SequentialAgent(
-    name="ArticleFactory",
+    name="ChatterToChapter",
     description="ポッドキャスト文字起こしから月刊記事を自動生成するパイプライン。TranscriptLoader → EpisodeMiner → DraftWriter → ImageGenerator → Publisher の順で処理します。",
     sub_agents=[
         transcript_loader,

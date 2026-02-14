@@ -1,8 +1,8 @@
-# Article Factory - Agent Rules
+# Chatter to Chapter - Agent Rules
 
 ## Overview
 
-Article Factory は、ポッドキャスト文字起こしから月刊記事を自動生成する ADK マルチエージェントパイプラインです。
+Chatter to Chapter は、ポッドキャスト文字起こしから月刊記事を自動生成する ADK マルチエージェントパイプラインです。
 
 ## パイプラインルール
 

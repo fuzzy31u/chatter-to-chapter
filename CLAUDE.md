@@ -1,9 +1,9 @@
-# hub.momit.fm — Article Factory
+# Chatter to Chapter
 
 ## Project Overview
 
 Google Cloud Japan AI Hackathon Vol.4 エントリー作品。
-ポッドキャスト文字起こしから月刊記事を自動生成する ADK マルチエージェントパイプライン。
+ポッドキャスト文字起こしから記事を自動生成する ADK マルチエージェントパイプライン。
 
 **Deadline: 2026-02-15**
 
@@ -42,9 +42,9 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 - **output_key pitfall**: TranscriptLoader and ImageGenerator do NOT use `output_key` because their tools directly set state via `tool_context.state[key]`. Using `output_key` would overwrite tool-set values with the agent's text response.
 - **Imagen 3 is SHUTDOWN** — using Imagen 4 (`imagen-4.0-generate-001`)
 - **DRY_RUN mode**: Set `DRY_RUN=TRUE` in `.env` — Pillow でテキスト付きプレースホルダー画像をローカル生成（外部 URL 不使用）
-- **File paths in tools**: `transcript_loader.py` resolves relative paths from `article_factory/` directory
+- **File paths in tools**: `transcript_loader.py` resolves relative paths from `chatter_to_chapter/` directory
 - **Publisher date**: Uses `date.today().isoformat()` at import time via f-string
-- **Cloud Run deploy**: `python3 -m google.adk.cli deploy cloud_run --project=hub-momit-fm --region=us-central1 --service_name=article-factory --with_ui article_factory/`
+- **Cloud Run deploy**: `python3 -m google.adk.cli deploy cloud_run --project=hub-momit-fm --region=us-central1 --service_name=chatter-to-chapter --with_ui chatter_to_chapter/`
 - **requirements.txt** must include `deprecated` package (ADK dependency not auto-resolved) and `Pillow` (text overlay)
 - **Text overlay**: `text_overlay.py` が `episode_data` JSON の `title` フィールドを抽出し、Pillow で画像中央に半透明黒角丸矩形 + 白テキストを合成。フォントは `fonts/NotoSansJP-Bold.ttf`
 - **Artifact URL 統一**: 全モード（DRY_RUN / Real / Fallback）で `artifact://hero_image.png` URL を返す（placehold.co 依存を排除）
@@ -71,8 +71,8 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 ## File Structure
 
 ```
-hub.momit.fm/
-  article_factory/
+chatter-to-chapter/
+  chatter_to_chapter/
     __init__.py                     # from . import agent
     agent.py                        # root_agent = SequentialAgent(...)
     .env                            # GOOGLE_GENAI_USE_VERTEXAI=TRUE, DRY_RUN=TRUE

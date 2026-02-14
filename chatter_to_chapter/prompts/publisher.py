@@ -33,7 +33,7 @@ title: "記事タイトル"
 date: "{_TODAY}"
 description: "記事の概要（120字以内、SEO を意識）"
 image: "（入力で提供されたヒーロー画像 URL をそのまま貼る）"
-tags:（エピソードの内容に基づいて 3-6 個 + podcast, momit.fm）
+tags:（エピソードの内容に基づいて 3-6 個 + podcast, chatter-to-chapter）
 categories:
   - Podcast
 draft: false

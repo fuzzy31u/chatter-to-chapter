@@ -19,7 +19,7 @@ def load_transcript(source: str, tool_context: ToolContext) -> dict:
         source: 文字起こしテキストのファイルパス、またはインラインの文字起こしテキスト。
     """
     try:
-        # ファイルパスとして存在するか確認（相対パスは article_factory/ 基準で解決）
+        # ファイルパスとして存在するか確認（相対パスは chatter_to_chapter/ 基準で解決）
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         candidate = (
             os.path.join(base_dir, source) if not os.path.isabs(source) else source
