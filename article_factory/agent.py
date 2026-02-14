@@ -1,6 +1,12 @@
 """Article Factory — ポッドキャスト文字起こしから月刊記事を自動生成するパイプライン。"""
 
+import logging
+import time
+from typing import Optional
+
 from google.adk.agents import Agent, SequentialAgent
+from google.adk.agents.callback_context import CallbackContext
+from google.genai import types
 
 from .prompts import (
     DRAFT_WRITER_INSTRUCTION,
@@ -9,7 +15,49 @@ from .prompts import (
 )
 from .tools import generate_hero_image, load_transcript
 
+logger = logging.getLogger(__name__)
+
+# ログ設定（未設定の場合のみ）
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+    )
+
 MODEL = "gemini-2.0-flash-001"
+
+# --- Agent Callbacks ---
+
+# エージェントごとの開始時刻を保持
+_agent_start_times: dict[str, float] = {}
+
+
+def _before_agent(callback_context: CallbackContext) -> Optional[types.Content]:
+    """エージェント開始時のログ出力。"""
+    agent_name = callback_context.agent_name
+    _agent_start_times[agent_name] = time.time()
+    state_keys = list(callback_context.state.keys())
+    logger.info(
+        "▶ [%s] 開始 | state keys: %s",
+        agent_name,
+        state_keys,
+    )
+    return None  # 通常のエージェント実行を継続
+
+
+def _after_agent(callback_context: CallbackContext) -> Optional[types.Content]:
+    """エージェント完了時のログ出力。"""
+    agent_name = callback_context.agent_name
+    elapsed = time.time() - _agent_start_times.pop(agent_name, time.time())
+    state_keys = list(callback_context.state.keys())
+    logger.info(
+        "✔ [%s] 完了（%.1f秒）| state keys: %s",
+        agent_name,
+        elapsed,
+        state_keys,
+    )
+    return None  # エージェントのレスポンスをそのまま使用
+
 
 # --- Step 1: TranscriptLoader ---
 # ユーザー入力から文字起こしテキストを読み込み、state に保存する
@@ -25,8 +73,11 @@ transcript_loader = Agent(
 - ユーザーがテキストを直接入力した場合: そのテキストを source に渡す
 - ユーザーが何も指定しない場合: "sample_data/sample_transcript.txt" をデフォルトとして使用
 
-読み込みが完了したら、結果を簡潔に報告してください。""",
+読み込みが完了したら、結果を簡潔に報告してください。
+ツールが error ステータスを返した場合は、エラーメッセージをそのまま報告してください。""",
     tools=[load_transcript],
+    before_agent_callback=_before_agent,
+    after_agent_callback=_after_agent,
     # NOTE: output_key を使わない。ツールが直接 state["transcript"] を設定するため。
 )
 
@@ -38,6 +89,8 @@ episode_miner = Agent(
     description="ポッドキャストエピソードの構造データを抽出するエージェント",
     instruction=EPISODE_MINER_INSTRUCTION,
     output_key="episode_data",
+    before_agent_callback=_before_agent,
+    after_agent_callback=_after_agent,
 )
 
 # --- Step 3: DraftWriter ---
@@ -48,6 +101,8 @@ draft_writer = Agent(
     description="Markdown 記事を生成するエージェント",
     instruction=DRAFT_WRITER_INSTRUCTION,
     output_key="draft_article",
+    before_agent_callback=_before_agent,
+    after_agent_callback=_after_agent,
 )
 
 # --- Step 4: ImageGenerator ---
@@ -74,6 +129,8 @@ image_generator = Agent(
 - ポッドキャスト / テクノロジー / コミュニケーションに関連する要素を入れる
 - 480トークン以内に収める""",
     tools=[generate_hero_image],
+    before_agent_callback=_before_agent,
+    after_agent_callback=_after_agent,
     # NOTE: output_key を使わない。ツールが直接 state["hero_image_url"] を設定するため。
 )
 
@@ -85,6 +142,8 @@ publisher = Agent(
     description="最終記事を仕上げるエージェント",
     instruction=PUBLISHER_INSTRUCTION,
     output_key="final_article",
+    before_agent_callback=_before_agent,
+    after_agent_callback=_after_agent,
 )
 
 # --- Root Agent: ArticleFactory Pipeline ---
