@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Environment variables
+.env
+article_factory/.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.cursor/
+.windsurf/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# ADK
+.adk/
+
+# Generated artifacts
+*.png
+*.jpg
+*.jpeg
+!article_factory/sample_data/**
