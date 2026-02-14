@@ -2,10 +2,7 @@
 
 ## Project Overview
 
-Google Cloud Japan AI Hackathon Vol.4 エントリー作品。
 ポッドキャスト文字起こしから記事を自動生成する ADK マルチエージェントパイプライン。
-
-**Deadline: 2026-02-15**
 
 ## Key URLs
 
@@ -49,25 +46,6 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 - **Text overlay**: `text_overlay.py` が `episode_data` JSON の `title` フィールドを抽出し、Pillow で画像中央に半透明黒角丸矩形 + 白テキストを合成。フォントは `fonts/NotoSansJP-Bold.ttf`
 - **Artifact URL 統一**: 全モード（DRY_RUN / Real / Fallback）で `artifact://hero_image.png` URL を返す（placehold.co 依存を排除）
 
-## Phase Status
-
-| Phase | Status | Notes |
-|-------|--------|-------|
-| Phase 0: GCP Setup | DONE | Billing enabled, APIs activated |
-| Phase 1: Skeleton + Local | DONE | All files created, local test passed |
-| Phase 2: Cloud Run Deploy | DONE | Deployed at revision 4, allUsers access |
-| Phase 3: Polish | DONE | output_key bug fixed, prompts tuned, redeployed |
-| Phase 3.5: Text Overlay | DONE | Pillow テキストオーバーレイ、artifact URL 統一、placehold.co 依存排除 |
-| Phase 4: Submission | IN PROGRESS | git commit+push 済、README 更新済、Zenn article + demo video 残 |
-
-## Phase 4 TODO (Remaining Work)
-
-1. ~~**Git commit & push**~~ — DONE (main branch に push 済み)
-2. ~~**README.md finalize**~~ — DONE (Cloud Run URL、アーキテクチャ、File Structure 更新済み)
-3. **GitHub repo public** — リポジトリを public に設定
-4. **Zenn article** — Project overview, architecture (Mermaid), code snippets, demo results. Category: Idea, topic tag: `gch4`
-5. **3-min demo video** — ADK Web UI pipeline execution demo → YouTube embed
-
 ## File Structure
 
 ```
@@ -100,10 +78,3 @@ chatter-to-chapter/
   LICENSE                           # MIT
   CLAUDE.md                         # This file
 ```
-
-## Required Hackathon Deliverables
-
-1. Public GitHub repository URL
-2. Deployed Cloud Run URL (already: https://article-factory-106018685388.us-central1.run.app)
-3. Zenn article (category: Idea, topic tag: `gch4`)
-4. 3-min demo video (YouTube)

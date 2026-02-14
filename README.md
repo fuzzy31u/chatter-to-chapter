@@ -2,8 +2,6 @@
 
 ポッドキャスト文字起こしから記事を自動生成する ADK マルチエージェントパイプライン。
 
-> Google Cloud Japan AI Hackathon Vol.4 エントリー作品
-
 **Deployed**: https://article-factory-106018685388.us-central1.run.app
 
 ## Architecture
