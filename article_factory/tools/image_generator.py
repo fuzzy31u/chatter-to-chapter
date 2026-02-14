@@ -6,7 +6,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai import types
 
 
-def generate_hero_image(prompt: str, tool_context: ToolContext) -> dict:
+async def generate_hero_image(prompt: str, tool_context: ToolContext) -> dict:
     """記事のヒーロー画像を生成します。プロンプトに基づいて Imagen で画像を生成し、アーティファクトとして保存します。
 
     Args:
@@ -42,7 +42,7 @@ def generate_hero_image(prompt: str, tool_context: ToolContext) -> dict:
             image_part = types.Part.from_bytes(
                 data=image_bytes, mime_type="image/png"
             )
-            version = tool_context.save_artifact(
+            version = await tool_context.save_artifact(
                 filename="hero_image.png", artifact=image_part
             )
             artifact_url = f"artifact://hero_image.png?version={version}"

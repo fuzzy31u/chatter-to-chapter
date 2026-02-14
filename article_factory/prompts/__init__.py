@@ -1,3 +1,4 @@
 from .episode_miner import EPISODE_MINER_INSTRUCTION
 from .draft_writer import DRAFT_WRITER_INSTRUCTION
+from .image_generator import IMAGE_GENERATOR_INSTRUCTION
 from .publisher import PUBLISHER_INSTRUCTION

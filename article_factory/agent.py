@@ -1,6 +1,7 @@
 """Article Factory — ポッドキャスト文字起こしから月刊記事を自動生成するパイプライン。"""
 
 import logging
+import os
 import time
 from typing import Optional
 
@@ -11,6 +12,7 @@ from google.genai import types
 from .prompts import (
     DRAFT_WRITER_INSTRUCTION,
     EPISODE_MINER_INSTRUCTION,
+    IMAGE_GENERATOR_INSTRUCTION,
     PUBLISHER_INSTRUCTION,
 )
 from .tools import generate_hero_image, load_transcript
@@ -36,7 +38,7 @@ def _before_agent(callback_context: CallbackContext) -> Optional[types.Content]:
     """エージェント開始時のログ出力。"""
     agent_name = callback_context.agent_name
     _agent_start_times[agent_name] = time.time()
-    state_keys = list(callback_context.state.keys())
+    state_keys = list(callback_context.state.to_dict().keys())
     logger.info(
         "▶ [%s] 開始 | state keys: %s",
         agent_name,
@@ -49,7 +51,7 @@ def _after_agent(callback_context: CallbackContext) -> Optional[types.Content]:
     """エージェント完了時のログ出力。"""
     agent_name = callback_context.agent_name
     elapsed = time.time() - _agent_start_times.pop(agent_name, time.time())
-    state_keys = list(callback_context.state.keys())
+    state_keys = list(callback_context.state.to_dict().keys())
     logger.info(
         "✔ [%s] 完了（%.1f秒）| state keys: %s",
         agent_name,
@@ -59,6 +61,31 @@ def _after_agent(callback_context: CallbackContext) -> Optional[types.Content]:
     return None  # エージェントのレスポンスをそのまま使用
 
 
+def _after_transcript_loader(
+    callback_context: CallbackContext,
+) -> Optional[types.Content]:
+    """TranscriptLoader 完了後、transcript が未設定ならサンプルデータで補完する。"""
+    _after_agent(callback_context)
+
+    state_dict = callback_context.state.to_dict()
+    if "transcript" not in state_dict or not state_dict.get("transcript"):
+        sample_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "sample_data",
+            "sample_transcript.txt",
+        )
+        try:
+            with open(sample_path, encoding="utf-8") as f:
+                callback_context.state["transcript"] = f.read()
+            logger.warning(
+                "TranscriptLoader が transcript を設定しなかったため、サンプルデータで補完しました"
+            )
+        except Exception:
+            logger.exception("サンプルデータの読み込みに失敗しました")
+
+    return None
+
+
 # --- Step 1: TranscriptLoader ---
 # ユーザー入力から文字起こしテキストを読み込み、state に保存する
 transcript_loader = Agent(
@@ -66,6 +93,8 @@ transcript_loader = Agent(
     model=MODEL,
     description="文字起こしテキストを読み込むエージェント",
     instruction="""あなたは文字起こしテキストの読み込みを担当するエージェントです。
+
+【重要】必ず load_transcript ツールを1回呼び出してください。テキストで応答するだけでは不十分です。
 
 ユーザーの入力を確認し、load_transcript ツールを使って文字起こしテキストを読み込んでください。
 
@@ -77,7 +106,7 @@ transcript_loader = Agent(
 ツールが error ステータスを返した場合は、エラーメッセージをそのまま報告してください。""",
     tools=[load_transcript],
     before_agent_callback=_before_agent,
-    after_agent_callback=_after_agent,
+    after_agent_callback=_after_transcript_loader,
     # NOTE: output_key を使わない。ツールが直接 state["transcript"] を設定するため。
 )
 
@@ -111,23 +140,7 @@ image_generator = Agent(
     name="ImageGenerator",
     model=MODEL,
     description="記事のヒーロー画像を生成するエージェント",
-    instruction="""あなたは記事のヒーロー画像の生成を担当するエージェントです。
-
-以下のドラフト記事の内容を読み、記事のテーマに合ったヒーロー画像を生成してください。
-
-## ドラフト記事
-{draft_article}
-
-## タスク
-1. 記事のテーマを分析し、適切な画像プロンプトを英語で作成
-2. generate_hero_image ツールを使って画像を生成
-3. 結果を報告
-
-## プロンプト作成のコツ
-- 英語で記述（Imagen は英語プロンプトが最も高品質）
-- 具体的でビジュアルな描写を含める
-- ポッドキャスト / テクノロジー / コミュニケーションに関連する要素を入れる
-- 480トークン以内に収める""",
+    instruction=IMAGE_GENERATOR_INSTRUCTION,
     tools=[generate_hero_image],
     before_agent_callback=_before_agent,
     after_agent_callback=_after_agent,
