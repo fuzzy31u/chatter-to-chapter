@@ -8,21 +8,7 @@
 
 ## Architecture
 
-```mermaid
-graph LR
-    A[User Input] --> B[TranscriptLoader]
-    B --> C[EpisodeMiner]
-    C --> D[DraftWriter]
-    D --> E[ImageGenerator]
-    E --> F[Publisher]
-    F --> G[Final Article]
-
-    style B fill:#e3f2fd
-    style C fill:#fff3e0
-    style D fill:#e8f5e9
-    style E fill:#fce4ec
-    style F fill:#f3e5f5
-```
+![System Architecture](docs/architecture-diagram.png)
 
 5 つのサブエージェントを ADK `SequentialAgent` で直列実行し、`output_key` と `tool_context.state` で state を共有します。
 
@@ -31,7 +17,7 @@ graph LR
 | TranscriptLoader | Tool Agent | 文字起こしテキストの読み込み | `state["transcript"]` |
 | EpisodeMiner | LLM Agent | エピソードの構造データ抽出 | `state["episode_data"]` |
 | DraftWriter | LLM Agent | Markdown 記事の生成 | `state["draft_article"]` |
-| ImageGenerator | Tool Agent | Imagen 4 によるヒーロー画像生成 | `state["hero_image_url"]` |
+| ImageGenerator | Tool Agent | Imagen 4 によるヒーロー画像生成 + 日本語テキストオーバーレイ | `state["hero_image_url"]` |
 | Publisher | LLM Agent | frontmatter 付き最終記事の出力 | `state["final_article"]` |
 
 ### State 共有の設計
@@ -39,11 +25,29 @@ graph LR
 - **LLM Agent** (EpisodeMiner, DraftWriter, Publisher): `output_key` でエージェントの応答を自動的に state に保存
 - **Tool Agent** (TranscriptLoader, ImageGenerator): ツール関数内で `tool_context.state[key]` を直接設定。`output_key` は使用しない (ツールが設定した値をエージェントの応答で上書きしてしまうため)
 
+### ヒーロー画像生成フロー
+
+```
+EpisodeMiner → episode_data (JSON with title)
+                    ↓
+ImageGenerator → _extract_title() でタイトル抽出
+                    ↓
+              ┌─ DRY_RUN: create_placeholder_with_text() でローカル画像生成
+              ├─ Real: Imagen 4 生成 → add_text_overlay() でタイトル合成
+              └─ Fallback: create_placeholder_with_text() でエラー時画像生成
+                    ↓
+              artifact://hero_image.png として保存
+```
+
+Imagen は CJK テキストレンダリングが不得意なため、画像生成後に Pillow で後処理としてテキストを合成しています。
+
 ## Tech Stack
 
 - **Agent Framework**: [Google ADK](https://google.github.io/adk-docs/) v1.0.0
 - **LLM**: Gemini 2.0 Flash (`gemini-2.0-flash-001`)
-- **Image Generation**: Imagen 4 (`imagen-4.0-generate-001`) / DRY_RUN モードでプレースホルダー対応
+- **Image Generation**: Imagen 4 (`imagen-4.0-generate-001`) + Pillow テキストオーバーレイ / DRY_RUN モードでローカルプレースホルダー生成
+- **Image Processing**: [Pillow](https://pillow.readthedocs.io/) (日本語タイトルオーバーレイ合成)
+- **Font**: Noto Sans JP (Google Fonts, OFL License)
 - **Backend**: Vertex AI (GCP)
 - **Deployment**: Google Cloud Run
 - **Language**: Python 3.11+
@@ -121,10 +125,13 @@ hub.momit.fm/
 │   ├── agent.py                  # root_agent (SequentialAgent)
 │   ├── .env                      # Vertex AI / DRY_RUN 設定
 │   ├── requirements.txt
+│   ├── fonts/
+│   │   └── NotoSansJP-Bold.ttf   # 日本語フォント (Google Fonts, OFL)
 │   ├── tools/
 │   │   ├── __init__.py
 │   │   ├── transcript_loader.py  # load_transcript()
-│   │   └── image_generator.py    # generate_hero_image()
+│   │   ├── image_generator.py    # generate_hero_image()
+│   │   └── text_overlay.py       # add_text_overlay(), create_placeholder_with_text()
 │   ├── prompts/
 │   │   ├── __init__.py
 │   │   ├── episode_miner.py
@@ -132,6 +139,8 @@ hub.momit.fm/
 │   │   └── publisher.py
 │   └── sample_data/
 │       └── sample_transcript.txt
+├── docs/
+│   └── architecture-diagram.png  # システムアーキテクチャ図
 ├── .env.example
 ├── .gitignore
 ├── LICENSE

@@ -36,4 +36,5 @@ Thumbs.db
 *.png
 *.jpg
 *.jpeg
+!docs/**
 !article_factory/sample_data/**
