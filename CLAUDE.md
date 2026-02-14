@@ -41,7 +41,7 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 - **DRY_RUN mode**: Set `DRY_RUN=TRUE` in `.env` — Pillow でテキスト付きプレースホルダー画像をローカル生成（外部 URL 不使用）
 - **File paths in tools**: `transcript_loader.py` resolves relative paths from `chatter_to_chapter/` directory
 - **Publisher date**: Uses `date.today().isoformat()` at import time via f-string
-- **Cloud Run deploy**: `python3 -m google.adk.cli deploy cloud_run --project=hub-momit-fm --region=us-central1 --service_name=chatter-to-chapter --with_ui chatter_to_chapter/`
+- **Cloud Run deploy**: `python3 -m google.adk.cli deploy cloud_run --project=hub-momit-fm --region=us-central1 --service_name=article-factory --with_ui chatter_to_chapter/`
 - **requirements.txt** must include `deprecated` package (ADK dependency not auto-resolved) and `Pillow` (text overlay)
 - **Text overlay**: `text_overlay.py` が `episode_data` JSON の `title` フィールドを抽出し、Pillow で画像中央に半透明黒角丸矩形 + 白テキストを合成。フォントは `fonts/NotoSansJP-Bold.ttf`
 - **Artifact URL 統一**: 全モード（DRY_RUN / Real / Fallback）で `artifact://hero_image.png` URL を返す（placehold.co 依存を排除）
