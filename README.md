@@ -83,53 +83,56 @@ gcloud auth application-default login
 ### Run Locally
 
 ```bash
-python3 -m google.adk.cli web
+uvicorn main:app --port 8000
 ```
 
-ブラウザで `http://localhost:8000` にアクセスし、`chatter_to_chapter` を選択してサンプル transcript を投入します。
+ブラウザで `http://localhost:8000` にアクセスし、カスタム Web UI から transcript を投入します。
 
 ### Deploy to Cloud Run
 
 ```bash
-python3 -m google.adk.cli deploy cloud_run \
-  --project=hub-momit-fm \
-  --region=us-central1 \
-  --service_name=chatter-to-chapter \
-  --with_ui \
-  chatter_to_chapter/
+gcloud run deploy chatter-to-chapter \
+  --source . \
+  --project hub-momit-fm \
+  --region us-central1 \
+  --port 8080 \
+  --allow-unauthenticated
 ```
 
 ## Usage
 
-ADK Web UI で以下のように入力:
+カスタム Web UI でパイプラインを実行します。テキストエリアに文字起こしを貼り付けるか、「サンプルを使用」ボタンでデモデータを読み込み、「記事を生成」をクリックします。
 
-```
-以下の文字起こしから記事を生成してください:
-[文字起こしテキストをペースト]
-```
+5 段階のパイプライン進捗がリアルタイムで表示され、完了後にヒーロー画像と記事プレビューが表示されます。生成された記事は Copy ボタンまたは Download .md ボタンで取得できます。
 
-または、サンプルデータを使用:
+### Web UI 機能
 
-```
-sample_data/sample_transcript.txt の文字起こしから記事を生成してください。
-```
+- **Pipeline Progress**: 5 ステップの進捗バー（TranscriptLoader → EpisodeMiner → DraftWriter → ImageGenerator → Publisher）
+- **Agent Log**: 各エージェントの実行ログをリアルタイム表示
+- **Article Preview**: Markdown をリッチにレンダリング（YAML frontmatter 対応）
+- **Hero Image**: 生成されたヒーロー画像を表示
+- **Copy / Download**: 最終記事のクリップボードコピーと .md ファイルダウンロード
 
 ## File Structure
 
 ```
 chatter-to-chapter/
+├── main.py                        # FastAPI entrypoint (ADK + custom static files)
+├── Dockerfile                     # Cloud Run deployment
+├── web/
+│   └── index.html                 # Custom Web UI (Tailwind CSS + marked.js)
 ├── chatter_to_chapter/
 │   ├── __init__.py
-│   ├── agent.py                  # root_agent (SequentialAgent)
-│   ├── .env                      # Vertex AI / DRY_RUN 設定
+│   ├── agent.py                   # root_agent (SequentialAgent)
+│   ├── .env                       # Vertex AI / DRY_RUN 設定
 │   ├── requirements.txt
 │   ├── fonts/
-│   │   └── NotoSansJP-Bold.ttf   # 日本語フォント (Google Fonts, OFL)
+│   │   └── NotoSansJP-Bold.ttf    # 日本語フォント (Google Fonts, OFL)
 │   ├── tools/
 │   │   ├── __init__.py
-│   │   ├── transcript_loader.py  # load_transcript()
-│   │   ├── image_generator.py    # generate_hero_image()
-│   │   └── text_overlay.py       # add_text_overlay(), create_placeholder_with_text()
+│   │   ├── transcript_loader.py   # load_transcript()
+│   │   ├── image_generator.py     # generate_hero_image()
+│   │   └── text_overlay.py        # add_text_overlay(), create_placeholder_with_text()
 │   ├── prompts/
 │   │   ├── __init__.py
 │   │   ├── episode_miner.py
@@ -138,7 +141,7 @@ chatter-to-chapter/
 │   └── sample_data/
 │       └── sample_transcript.txt
 ├── docs/
-│   └── architecture-diagram.png  # システムアーキテクチャ図
+│   └── architecture-diagram.png   # システムアーキテクチャ図
 ├── .env.example
 ├── .gitignore
 ├── LICENSE

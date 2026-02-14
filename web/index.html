@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatter to Chapter</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .step-active .step-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+    /* Markdown rendered article styles */
+    .article-preview h1 { font-size: 1.75rem; font-weight: 700; margin: 1.5rem 0 0.75rem; line-height: 1.3; }
+    .article-preview h2 { font-size: 1.375rem; font-weight: 600; margin: 1.25rem 0 0.5rem; line-height: 1.4; }
+    .article-preview h3 { font-size: 1.125rem; font-weight: 600; margin: 1rem 0 0.5rem; }
+    .article-preview p { margin: 0.5rem 0; line-height: 1.8; }
+    .article-preview ul, .article-preview ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    .article-preview li { margin: 0.25rem 0; line-height: 1.7; }
+    .article-preview blockquote {
+      border-left: 3px solid #6366f1;
+      padding: 0.5rem 1rem;
+      margin: 0.75rem 0;
+      background: #f5f3ff;
+      border-radius: 0 0.375rem 0.375rem 0;
+    }
+    .article-preview code {
+      background: #f1f5f9;
+      padding: 0.125rem 0.375rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    .article-preview pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      overflow-x: auto;
+      margin: 0.75rem 0;
+    }
+    .article-preview pre code { background: transparent; color: inherit; padding: 0; }
+    .article-preview hr { border: none; border-top: 1px solid #e2e8f0; margin: 1.5rem 0; }
+    .article-preview a { color: #6366f1; text-decoration: underline; }
+
+    /* YAML frontmatter */
+    .article-preview .frontmatter {
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      white-space: pre-wrap;
+      color: #92400e;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 py-5">
+      <h1 class="text-2xl font-bold text-gray-900">Chatter to Chapter</h1>
+      <p class="text-sm text-gray-500 mt-1">Podcast transcript to article — AI multi-agent pipeline</p>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+
+    <!-- Input Section -->
+    <section id="input-section" class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <label for="transcript-input" class="block text-sm font-medium text-gray-700 mb-2">
+        Transcript テキスト
+      </label>
+      <textarea
+        id="transcript-input"
+        rows="6"
+        class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 resize-y"
+        placeholder="文字起こしテキストを貼り付けてください..."
+      ></textarea>
+      <div class="flex items-center gap-3 mt-4">
+        <button
+          id="btn-sample"
+          class="px-4 py-2 text-sm font-medium text-brand-600 bg-brand-50 border border-brand-200 rounded-lg hover:bg-brand-100 transition"
+        >
+          サンプルを使用
+        </button>
+        <button
+          id="btn-generate"
+          class="px-6 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          記事を生成
+        </button>
+        <span id="status-text" class="text-sm text-gray-400 ml-auto"></span>
+      </div>
+    </section>
+
+    <!-- Pipeline Progress -->
+    <section id="progress-section" class="hidden">
+      <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Pipeline Progress</h2>
+        <div class="flex items-center justify-between" id="pipeline-steps">
+          <!-- Steps rendered by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Output Section -->
+    <section id="output-section" class="hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        <!-- Left Column: Hero Image + Agent Log -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Hero Image -->
+          <div id="hero-image-card" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden">
+            <img id="hero-image" class="w-full object-cover" alt="Hero Image" />
+          </div>
+
+          <!-- Agent Log -->
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Agent Log</h3>
+            <div id="agent-log" class="space-y-2 max-h-80 overflow-y-auto text-xs font-mono text-gray-600">
+              <!-- Logs rendered by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Article Preview -->
+        <div class="lg:col-span-3">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Article Preview</h3>
+              <div id="action-buttons" class="flex gap-2 hidden">
+                <button
+                  id="btn-copy"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition"
+                >
+                  Copy
+                </button>
+                <button
+                  id="btn-download"
+                  class="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition"
+                >
+                  Download .md
+                </button>
+              </div>
+            </div>
+            <div id="article-preview" class="article-preview text-gray-800 leading-relaxed">
+              <p class="text-gray-400 text-sm italic">パイプライン実行後にここに記事が表示されます。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+<script>
+// --- Constants ---
+const APP_NAME = 'chatter_to_chapter';
+const STAGES = [
+  { agent: 'TranscriptLoader', label: 'Transcript 読み込み', stateKey: 'transcript' },
+  { agent: 'EpisodeMiner',     label: 'エピソード分析',       stateKey: 'episode_data' },
+  { agent: 'DraftWriter',      label: '記事ドラフト作成',     stateKey: 'draft_article' },
+  { agent: 'ImageGenerator',   label: 'ヒーロー画像生成',     stateKey: 'hero_image_url' },
+  { agent: 'Publisher',        label: '最終記事出力',         stateKey: 'final_article' },
+];
+
+// --- State ---
+let userId = 'web-user-' + crypto.randomUUID().slice(0, 8);
+let sessionId = null;
+let currentStage = -1;
+let rawFinalArticle = '';
+let heroImageDataUri = '';
+let completedKeys = new Set();
+
+// --- DOM References ---
+const $input = document.getElementById('transcript-input');
+const $btnSample = document.getElementById('btn-sample');
+const $btnGenerate = document.getElementById('btn-generate');
+const $statusText = document.getElementById('status-text');
+const $progressSection = document.getElementById('progress-section');
+const $pipelineSteps = document.getElementById('pipeline-steps');
+const $outputSection = document.getElementById('output-section');
+const $heroImageCard = document.getElementById('hero-image-card');
+const $heroImage = document.getElementById('hero-image');
+const $agentLog = document.getElementById('agent-log');
+const $articlePreview = document.getElementById('article-preview');
+const $actionButtons = document.getElementById('action-buttons');
+const $btnCopy = document.getElementById('btn-copy');
+const $btnDownload = document.getElementById('btn-download');
+
+// --- Pipeline Steps Rendering ---
+function renderPipelineSteps() {
+  $pipelineSteps.innerHTML = STAGES.map((stage, i) => {
+    const connector = i < STAGES.length - 1
+      ? `<div class="flex-1 h-0.5 mx-1 ${i < currentStage ? 'bg-green-400' : 'bg-gray-200'} transition-colors"></div>`
+      : '';
+    let dotClass = 'w-3 h-3 rounded-full transition-colors';
+    let stepClass = 'flex flex-col items-center min-w-0';
+    let labelClass = 'text-xs mt-1.5 text-center truncate max-w-[5.5rem]';
+
+    if (i < currentStage || completedKeys.has(stage.stateKey)) {
+      dotClass += ' bg-green-500';
+      labelClass += ' text-green-700 font-medium';
+    } else if (i === currentStage) {
+      dotClass += ' bg-brand-500 step-dot';
+      stepClass += ' step-active';
+      labelClass += ' text-brand-600 font-medium';
+    } else {
+      dotClass += ' bg-gray-300';
+      labelClass += ' text-gray-400';
+    }
+
+    return `
+      <div class="${stepClass}" style="flex: 0 0 auto;">
+        <div class="${dotClass}"></div>
+        <span class="${labelClass}">${stage.label}</span>
+      </div>
+      ${connector}
+    `;
+  }).join('');
+}
+
+// --- Agent Log ---
+function addLog(text, type = 'info') {
+  const el = document.createElement('div');
+  const ts = new Date().toLocaleTimeString('ja-JP', { hour12: false });
+  const colors = { info: 'text-gray-500', success: 'text-green-600', error: 'text-red-500', agent: 'text-brand-600' };
+  el.className = colors[type] || colors.info;
+  el.textContent = `[${ts}] ${text}`;
+  $agentLog.appendChild(el);
+  $agentLog.scrollTop = $agentLog.scrollHeight;
+}
+
+// --- Article Rendering ---
+function renderArticle(markdown) {
+  if (!markdown) return;
+
+  let frontmatter = '';
+  let body = markdown;
+
+  // Extract YAML frontmatter
+  const fmMatch = markdown.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (fmMatch) {
+    frontmatter = fmMatch[1];
+    body = fmMatch[2];
+  }
+
+  let html = '';
+  if (frontmatter) {
+    html += `<div class="frontmatter">---\n${frontmatter}\n---</div>`;
+  }
+  html += marked.parse(body);
+
+  // Replace artifact:// URLs with actual image data URI
+  // Use a function replacement to avoid $-pattern interpretation in base64 data
+  if (heroImageDataUri) {
+    html = html.replace(/src="artifact:\/\/[^"]*"/g, () => `src="${heroImageDataUri}"`);
+  } else {
+    // Hide broken artifact:// images until data is available
+    html = html.replace(/<img[^>]*src="artifact:\/\/[^"]*"[^>]*>/g, '');
+  }
+
+  $articlePreview.innerHTML = html;
+}
+
+// --- API Helpers ---
+async function createSession() {
+  const res = await fetch(`/apps/${APP_NAME}/users/${userId}/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: {} }),
+  });
+  if (!res.ok) throw new Error(`Session creation failed: ${res.status}`);
+  const data = await res.json();
+  return data.id;
+}
+
+async function fetchHeroImage() {
+  try {
+    const res = await fetch(
+      `/apps/${APP_NAME}/users/${userId}/sessions/${sessionId}/artifacts/hero_image.png`
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+
+    // ADK artifact API may return the Part directly or nested under different keys
+    let mimeType = 'image/png';
+    let base64Data = '';
+
+    if (data && data.inlineData) {
+      mimeType = data.inlineData.mimeType || mimeType;
+      base64Data = data.inlineData.data || '';
+    } else if (data && data.parts && data.parts[0] && data.parts[0].inlineData) {
+      mimeType = data.parts[0].inlineData.mimeType || mimeType;
+      base64Data = data.parts[0].inlineData.data || '';
+    }
+
+    if (base64Data) {
+      heroImageDataUri = `data:${mimeType};base64,${base64Data}`;
+      $heroImage.src = heroImageDataUri;
+      $heroImageCard.classList.remove('hidden');
+
+      // Re-render article to replace artifact:// URLs with actual image
+      if (rawFinalArticle) {
+        renderArticle(rawFinalArticle);
+      }
+    }
+  } catch (e) {
+    addLog(`Hero image fetch failed: ${e.message}`, 'error');
+  }
+}
+
+// --- SSE Pipeline Execution ---
+async function runPipeline(userMessage) {
+  // Reset state
+  currentStage = -1;
+  rawFinalArticle = '';
+  heroImageDataUri = '';
+  completedKeys.clear();
+  $agentLog.innerHTML = '';
+  $articlePreview.innerHTML = '<p class="text-gray-400 text-sm italic">生成中...</p>';
+  $heroImageCard.classList.add('hidden');
+  $actionButtons.classList.add('hidden');
+  $progressSection.classList.remove('hidden');
+  $outputSection.classList.remove('hidden');
+  renderPipelineSteps();
+
+  // Create session
+  addLog('セッションを作成中...');
+  sessionId = await createSession();
+  addLog(`Session: ${sessionId}`, 'info');
+
+  // Start SSE
+  const payload = {
+    app_name: APP_NAME,
+    user_id: userId,
+    session_id: sessionId,
+    new_message: {
+      role: 'user',
+      parts: [{ text: userMessage }],
+    },
+    streaming: false,
+  };
+
+  addLog('パイプラインを開始...', 'agent');
+
+  const res = await fetch('/run_sse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    addLog(`Error: ${res.status} ${res.statusText}`, 'error');
+    $statusText.textContent = 'エラーが発生しました';
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop(); // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue;
+      const jsonStr = line.slice(6).trim();
+      if (!jsonStr) continue;
+
+      try {
+        const event = JSON.parse(jsonStr);
+        handleSSEEvent(event);
+      } catch (e) {
+        // Not valid JSON, skip
+      }
+    }
+  }
+
+  // Process remaining buffer
+  if (buffer.startsWith('data: ')) {
+    try {
+      const event = JSON.parse(buffer.slice(6).trim());
+      handleSSEEvent(event);
+    } catch (e) { /* ignore */ }
+  }
+
+  // Pipeline complete
+  addLog('パイプライン完了', 'success');
+  $statusText.textContent = '完了';
+
+  // Fetch hero image via artifact API
+  await fetchHeroImage();
+
+  // Show action buttons if we have a final article
+  if (rawFinalArticle) {
+    $actionButtons.classList.remove('hidden');
+  }
+}
+
+function handleSSEEvent(event) {
+  const content = event.content;
+  if (!content) return;
+
+  const author = content.author || '';
+  const parts = content.parts || [];
+
+  // Detect active agent
+  const stageIndex = STAGES.findIndex(s => s.agent === author);
+  if (stageIndex >= 0 && stageIndex !== currentStage) {
+    currentStage = stageIndex;
+    addLog(`${STAGES[stageIndex].label} (${author})`, 'agent');
+    renderPipelineSteps();
+  }
+
+  // Process parts for text content
+  for (const part of parts) {
+    if (part.text) {
+      // Check if this is a final output from a known agent
+      if (author === 'Publisher') {
+        rawFinalArticle = part.text;
+        renderArticle(part.text);
+      } else if (author === 'DraftWriter') {
+        // Show draft as intermediate preview
+        renderArticle(part.text);
+      }
+    }
+  }
+
+  // Detect state changes from actions.stateDelta
+  const actions = event.actions;
+  if (actions && actions.stateDelta) {
+    for (const key of Object.keys(actions.stateDelta)) {
+      const matchingStage = STAGES.find(s => s.stateKey === key);
+      if (matchingStage) {
+        completedKeys.add(key);
+        addLog(`State updated: ${key}`, 'success');
+
+        // Update current stage based on completion
+        const completedIndex = STAGES.indexOf(matchingStage);
+        if (completedIndex >= currentStage) {
+          currentStage = completedIndex + 1;
+        }
+        renderPipelineSteps();
+
+        // If final_article comes via stateDelta
+        if (key === 'final_article' && actions.stateDelta[key]) {
+          rawFinalArticle = actions.stateDelta[key];
+          renderArticle(rawFinalArticle);
+        }
+        // If draft_article comes via stateDelta (intermediate preview)
+        if (key === 'draft_article' && actions.stateDelta[key] && !rawFinalArticle) {
+          renderArticle(actions.stateDelta[key]);
+        }
+      }
+    }
+  }
+}
+
+// --- Load sample transcript ---
+async function loadSample() {
+  try {
+    $btnSample.disabled = true;
+    $btnSample.textContent = '読み込み中...';
+    // Use the known sample file path approach: tell the agent to use it
+    $input.value = 'sample_data/sample_transcript.txt の文字起こしから記事を生成してください。';
+    $btnSample.textContent = 'サンプルを使用';
+    $btnSample.disabled = false;
+  } catch (e) {
+    $btnSample.textContent = 'サンプルを使用';
+    $btnSample.disabled = false;
+  }
+}
+
+// --- Copy / Download ---
+function copyArticle() {
+  if (!rawFinalArticle) return;
+  navigator.clipboard.writeText(rawFinalArticle).then(() => {
+    $btnCopy.textContent = 'Copied!';
+    setTimeout(() => { $btnCopy.textContent = 'Copy'; }, 2000);
+  });
+}
+
+function downloadArticle() {
+  if (!rawFinalArticle) return;
+  const blob = new Blob([rawFinalArticle], { type: 'text/markdown' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'article.md';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// --- Event Listeners ---
+$btnSample.addEventListener('click', loadSample);
+
+$btnGenerate.addEventListener('click', async () => {
+  const text = $input.value.trim();
+  if (!text) {
+    $statusText.textContent = 'テキストを入力してください';
+    return;
+  }
+
+  $btnGenerate.disabled = true;
+  $statusText.textContent = '実行中...';
+
+  try {
+    await runPipeline(text);
+  } catch (e) {
+    addLog(`Fatal error: ${e.message}`, 'error');
+    $statusText.textContent = 'エラーが発生しました';
+  } finally {
+    $btnGenerate.disabled = false;
+  }
+});
+
+$btnCopy.addEventListener('click', copyArticle);
+$btnDownload.addEventListener('click', downloadArticle);
+</script>
+
+</body>
+</html>

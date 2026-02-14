@@ -41,8 +41,9 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 - **DRY_RUN mode**: Set `DRY_RUN=TRUE` in `.env` — Pillow でテキスト付きプレースホルダー画像をローカル生成（外部 URL 不使用）
 - **File paths in tools**: `transcript_loader.py` resolves relative paths from `chatter_to_chapter/` directory
 - **Publisher date**: Uses `date.today().isoformat()` at import time via f-string
-- **Cloud Run deploy**: `python3 -m google.adk.cli deploy cloud_run --project=hub-momit-fm --region=us-central1 --service_name=article-factory --with_ui chatter_to_chapter/`
-- **requirements.txt** must include `deprecated` package (ADK dependency not auto-resolved) and `Pillow` (text overlay)
+- **Cloud Run deploy**: `gcloud run deploy chatter-to-chapter --source . --project hub-momit-fm --region us-central1 --port 8080 --allow-unauthenticated`
+- **Local dev**: `uvicorn main:app --port 8000` → `http://localhost:8000` でカスタム Web UI 表示
+- **requirements.txt** must include `deprecated` package (ADK dependency not auto-resolved), `Pillow` (text overlay), and `uvicorn` (ASGI server)
 - **Text overlay**: `text_overlay.py` が `episode_data` JSON の `title` フィールドを抽出し、Pillow で画像中央に半透明黒角丸矩形 + 白テキストを合成。フォントは `fonts/NotoSansJP-Bold.ttf`
 - **Artifact URL 統一**: 全モード（DRY_RUN / Real / Fallback）で `artifact://hero_image.png` URL を返す（placehold.co 依存を排除）
 
@@ -50,11 +51,15 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 
 ```
 chatter-to-chapter/
+  main.py                           # FastAPI entrypoint (ADK + custom static files)
+  Dockerfile                        # Cloud Run deployment
+  web/
+    index.html                      # Custom Web UI (Tailwind CSS + marked.js)
   chatter_to_chapter/
     __init__.py                     # from . import agent
     agent.py                        # root_agent = SequentialAgent(...)
     .env                            # GOOGLE_GENAI_USE_VERTEXAI=TRUE, DRY_RUN=TRUE
-    requirements.txt                # google-adk[all], google-genai, deprecated, Pillow
+    requirements.txt                # google-adk[all], google-genai, deprecated, Pillow, uvicorn
     fonts/
       NotoSansJP-Bold.ttf           # Noto Sans JP (Google Fonts, OFL License)
     tools/

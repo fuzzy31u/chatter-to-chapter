@@ -2,3 +2,4 @@ google-adk[all]
 google-genai
 deprecated
 Pillow
+uvicorn
