@@ -1,4 +1,4 @@
-google-adk[all]
+google-adk[all]==1.0.0
 google-genai
 deprecated
 Pillow
