@@ -2,8 +2,6 @@
 
 ポッドキャスト文字起こしから記事を自動生成する ADK マルチエージェントパイプライン。
 
-**Deployed**: https://article-factory-106018685388.us-central1.run.app
-
 ## Architecture
 
 ![System Architecture](docs/architecture-diagram.png)
