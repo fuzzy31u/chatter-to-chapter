@@ -295,10 +295,13 @@ async function createSession() {
 
 async function fetchHeroImage() {
   try {
-    const res = await fetch(
-      `/apps/${APP_NAME}/users/${userId}/sessions/${sessionId}/artifacts/hero_image.png`
-    );
-    if (!res.ok) return;
+    // Try with version parameter first, then fallback to unversioned
+    const baseUrl = `/apps/${APP_NAME}/users/${userId}/sessions/${sessionId}/artifacts/hero_image.png`;
+    let res = await fetch(baseUrl);
+    if (!res.ok) {
+      addLog(`Hero image fetch failed: HTTP ${res.status} (${baseUrl})`, 'error');
+      return;
+    }
     const data = await res.json();
 
     // ADK artifact API may return the Part directly or nested under different keys
@@ -314,7 +317,9 @@ async function fetchHeroImage() {
     }
 
     if (base64Data) {
-      heroImageDataUri = `data:${mimeType};base64,${base64Data}`;
+      // ADK artifact API returns URL-safe base64 (- and _), convert to standard base64 (+ and /)
+      const stdBase64 = base64Data.replace(/-/g, '+').replace(/_/g, '/');
+      heroImageDataUri = `data:${mimeType};base64,${stdBase64}`;
       $heroImage.src = heroImageDataUri;
       $heroImageCard.classList.remove('hidden');
 

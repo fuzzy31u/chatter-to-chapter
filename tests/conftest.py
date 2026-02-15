@@ -1,6 +1,6 @@
 """テスト共通 fixtures。"""
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,6 +17,7 @@ def mock_tool_context():
     """ADK ToolContext の軽量モック。state は通常の dict。"""
     ctx = MagicMock()
     ctx.state = {}
+    ctx.save_artifact = AsyncMock(return_value=0)
     return ctx
 
 
