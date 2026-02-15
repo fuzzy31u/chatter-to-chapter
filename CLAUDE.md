@@ -46,6 +46,7 @@ ADK `SequentialAgent` with 5 sub-agents. Model: `gemini-2.0-flash-001`.
 - **requirements.txt** must include `deprecated` package (ADK dependency not auto-resolved), `Pillow` (text overlay), and `uvicorn` (ASGI server)
 - **Text overlay**: `text_overlay.py` が `episode_data` JSON の `title` フィールドを抽出し、Pillow で画像中央に半透明黒角丸矩形 + 白テキストを合成。フォントは `fonts/NotoSansJP-Bold.ttf`
 - **Artifact URL 統一**: 全モード（DRY_RUN / Real / Fallback）で `artifact://hero_image.png` URL を返す（placehold.co 依存を排除）
+- **Affiliate Links**: `ENABLE_AFFILIATE_LINKS=TRUE` でプロンプトにアフィリエイトリンク機能を注入。プレースホルダー URL `https://affiliate.example.com/{slug}` を使用。デフォルト OFF。各プロンプトファイルが `os.environ.get()` で条件分岐（`publisher.py` の `_TODAY` パターンに準拠）
 
 ## File Structure
 
