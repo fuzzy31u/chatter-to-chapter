@@ -1,5 +1,7 @@
 # Chatter to Chapter
 
+> 🌐 [English version available](./README.en.md)
+
 ポッドキャスト文字起こしから記事を自動生成する ADK マルチエージェントパイプライン。
 
 ## Architecture
